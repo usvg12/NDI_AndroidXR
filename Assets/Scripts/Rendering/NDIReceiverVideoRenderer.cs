@@ -13,7 +13,7 @@ namespace Rendering
         {
             if (receiver != null)
             {
-                receiver.FrameUpdated += HandleFrameUpdated;
+                receiver.VideoFrameReady += HandleFrameUpdated;
                 if (receiver.VideoTexture != null)
                 {
                     HandleFrameUpdated(receiver.VideoTexture);
@@ -25,11 +25,11 @@ namespace Rendering
         {
             if (receiver != null)
             {
-                receiver.FrameUpdated -= HandleFrameUpdated;
+                receiver.VideoFrameReady -= HandleFrameUpdated;
             }
         }
 
-        private void HandleFrameUpdated(Texture2D texture)
+        private void HandleFrameUpdated(Texture texture)
         {
             if (sbsRenderer == null)
             {

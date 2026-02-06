@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections;
-using System.Runtime.InteropServices;
 using UnityEngine;
 
 #if NDI_SDK_ENABLED
@@ -39,18 +38,17 @@ namespace NDI
         public event Action<NDIReceiverState> StateChanged;
         public event Action<string> ErrorChanged;
         public event Action<NDIFrameMetrics> MetricsUpdated;
-        public event Action<Texture2D> FrameUpdated;
+        public event Action<Texture> VideoFrameReady;
 
         public NDIReceiverState State { get; private set; } = NDIReceiverState.Idle;
         public string ErrorMessage { get; private set; }
         public bool HasError => !string.IsNullOrEmpty(ErrorMessage);
         public NDIFrameMetrics Metrics { get; private set; }
         public NDISourceInfo SelectedSource { get; private set; }
-        public Texture2D VideoTexture => videoTexture;
+        public Texture VideoTexture => videoTexture;
 
         private Coroutine reconnectCoroutine;
         private Texture2D videoTexture;
-        private byte[] frameBuffer;
         private float lastFrameReceivedTime;
 
 #if NDI_SDK_ENABLED
@@ -147,7 +145,7 @@ namespace NDI
                     var latestFrame = videoFrame;
                     DrainToLatestFrame(ref latestFrame);
                     UpdateMetricsFromFrame(latestFrame);
-                    UpdateVideoTexture(latestFrame);
+                    UpdateVideoTextureFromFrame(latestFrame);
                     NDIlib.recv_free_video_v2(receiverInstance, ref latestFrame);
                     lastFrameReceivedTime = Time.realtimeSinceStartup;
                 }
@@ -256,7 +254,6 @@ namespace NDI
                 videoTexture = null;
             }
 
-            frameBuffer = null;
         }
 
 #if NDI_SDK_ENABLED
@@ -275,55 +272,55 @@ namespace NDI
             MetricsUpdated?.Invoke(metrics);
         }
 
-        private void UpdateVideoTexture(NDIlib.video_frame_v2_t frame)
+        private void UpdateVideoTextureFromFrame(NDIlib.video_frame_v2_t frame)
         {
-            if (frame.xres <= 0 || frame.yres <= 0 || frame.p_data == IntPtr.Zero)
+            if (frame.p_data == IntPtr.Zero || frame.xres <= 0 || frame.yres <= 0)
             {
                 return;
             }
 
-            var bytesPerPixel = frame.line_stride_in_bytes / frame.xres;
-            if (bytesPerPixel != 4)
+            if (!TryGetTextureFormat(frame.FourCC, out var textureFormat))
             {
                 return;
             }
 
-            var expectedSize = frame.xres * frame.yres * bytesPerPixel;
-            if (frameBuffer == null || frameBuffer.Length != expectedSize)
-            {
-                frameBuffer = new byte[expectedSize];
-            }
-
-            if (frame.line_stride_in_bytes == frame.xres * bytesPerPixel)
-            {
-                Marshal.Copy(frame.p_data, frameBuffer, 0, frameBuffer.Length);
-            }
-            else
-            {
-                for (var row = 0; row < frame.yres; row++)
-                {
-                    var offset = row * frame.line_stride_in_bytes;
-                    Marshal.Copy(IntPtr.Add(frame.p_data, offset), frameBuffer, row * frame.xres * bytesPerPixel, frame.xres * bytesPerPixel);
-                }
-            }
-
-            if (videoTexture == null || videoTexture.width != frame.xres || videoTexture.height != frame.yres)
+            if (videoTexture == null
+                || videoTexture.width != frame.xres
+                || videoTexture.height != frame.yres
+                || videoTexture.format != textureFormat)
             {
                 if (videoTexture != null)
                 {
                     Destroy(videoTexture);
                 }
 
-                videoTexture = new Texture2D(frame.xres, frame.yres, TextureFormat.BGRA32, false)
+                videoTexture = new Texture2D(frame.xres, frame.yres, textureFormat, false)
                 {
                     wrapMode = TextureWrapMode.Clamp,
                     filterMode = FilterMode.Bilinear
                 };
             }
 
-            videoTexture.LoadRawTextureData(frameBuffer);
-            videoTexture.Apply(false);
-            FrameUpdated?.Invoke(videoTexture);
+            var dataSize = frame.line_stride_in_bytes * frame.yres;
+            videoTexture.LoadRawTextureData(frame.p_data, dataSize);
+            videoTexture.Apply(false, false);
+            VideoFrameReady?.Invoke(videoTexture);
+        }
+
+        private static bool TryGetTextureFormat(NDIlib.FourCC_type_e fourCC, out TextureFormat textureFormat)
+        {
+            switch (fourCC)
+            {
+                case NDIlib.FourCC_type_e.FourCC_type_BGRA:
+                    textureFormat = TextureFormat.BGRA32;
+                    return true;
+                case NDIlib.FourCC_type_e.FourCC_type_RGBA:
+                    textureFormat = TextureFormat.RGBA32;
+                    return true;
+                default:
+                    textureFormat = TextureFormat.RGBA32;
+                    return false;
+            }
         }
 #endif
 
