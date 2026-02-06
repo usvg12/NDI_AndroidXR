@@ -4,6 +4,7 @@ Shader "Custom/SBSSplit"
     {
         _MainTex ("Texture", 2D) = "white" {}
         _SBSMode ("SBS Mode", Float) = 0
+        _SwapEyes ("Swap Eyes", Float) = 0
     }
     SubShader
     {
@@ -37,6 +38,7 @@ Shader "Custom/SBSSplit"
             sampler2D _MainTex;
             float4 _MainTex_ST;
             float _SBSMode;
+            float _SwapEyes;
 
             v2f vert (appdata v)
             {
@@ -55,6 +57,11 @@ Shader "Custom/SBSSplit"
                 #else
                 uint eyeIndex = 0;
                 #endif
+
+                if (_SwapEyes > 0.5)
+                {
+                    eyeIndex = 1 - eyeIndex;
+                }
 
                 float2 sbsUv = uv;
                 sbsUv.x = uv.x * 0.5 + (eyeIndex == 0 ? 0.0 : 0.5);
