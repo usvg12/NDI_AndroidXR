@@ -6,7 +6,7 @@ PlayerSettings:
   serializedVersion: 23
   productGUID: 00000000000000000000000000000000
   AndroidTargetSdkVersion: 34
-  AndroidMinSdkVersion: 29
+  AndroidMinSdkVersion: 34
   AndroidTargetDevices: 0
   AndroidTargetArchitectures: 2
   androidEnableSustainedPerformanceMode: 1
