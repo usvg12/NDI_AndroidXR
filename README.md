@@ -1,5 +1,7 @@
 # NDI_AndroidXR
 
+> **Unity project location:** Open the Unity project from `UnityProject/` (this is the folder Unity should load). The repository root contains a placeholder `Assets/` tree and **should not** be opened as the Unity project.
+
 ## NDI SDK integration (Unity)
 
 ### Where to download

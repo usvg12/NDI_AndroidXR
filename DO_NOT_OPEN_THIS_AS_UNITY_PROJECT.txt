@@ -1,0 +1,6 @@
+Do NOT open this repository root as a Unity project.
+
+Open the Unity project located at:
+  UnityProject/
+
+This root folder includes a placeholder Assets/ tree and is not a valid Unity project.
