@@ -6,6 +6,12 @@
       "source": "git",
       "dependencies": {}
     },
+    "com.newtek.ndi": {
+      "version": "https://github.com/ndi/ndi-unity.git#v5.5.1",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {}
+    },
     "com.unity.collab-proxy": {
       "version": "2.0.5",
       "depth": 0,
@@ -67,6 +73,36 @@
       "version": "1.0.0",
       "depth": 0,
       "source": "registry",
+      "dependencies": {}
+    },
+    "com.unity.modules.audio": {
+      "version": "1.0.0",
+      "depth": 0,
+      "source": "built-in",
+      "dependencies": {}
+    },
+    "com.unity.modules.imageconversion": {
+      "version": "1.0.0",
+      "depth": 0,
+      "source": "built-in",
+      "dependencies": {}
+    },
+    "com.unity.modules.jsonserialize": {
+      "version": "1.0.0",
+      "depth": 0,
+      "source": "built-in",
+      "dependencies": {}
+    },
+    "com.unity.modules.physics": {
+      "version": "1.0.0",
+      "depth": 0,
+      "source": "built-in",
+      "dependencies": {}
+    },
+    "com.unity.modules.ui": {
+      "version": "1.0.0",
+      "depth": 0,
+      "source": "built-in",
       "dependencies": {}
     },
     "com.unity.xr.interaction.toolkit": {
