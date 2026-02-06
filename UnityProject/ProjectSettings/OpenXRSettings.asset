@@ -16,7 +16,13 @@ MonoBehaviour:
   m_depthSubmissionMode: 1
   m_instanceExtensions:
   - XR_KHR_android_create_instance
+  - XR_EXT_hand_tracking
+  - XR_EXT_eye_gaze_interaction
+  - XR_EXT_hand_interaction
   - XR_FB_passthrough
   m_enabledFeatureSets:
   - MixedReality
+  - HandTracking
+  - EyeGazeInteraction
+  - MotionControllers
   m_features: []

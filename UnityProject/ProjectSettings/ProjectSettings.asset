@@ -5,9 +5,10 @@ PlayerSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 23
   productGUID: 00000000000000000000000000000000
-  AndroidTargetSdkVersion: 33
+  AndroidTargetSdkVersion: 34
   AndroidMinSdkVersion: 29
   AndroidTargetDevices: 0
+  AndroidTargetArchitectures: 2
   androidEnableSustainedPerformanceMode: 1
   vrSettings:
     m_SupportedDevices:
