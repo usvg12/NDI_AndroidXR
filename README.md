@@ -26,6 +26,9 @@
 * NDI is a proprietary SDK. You must review and accept the NDI SDK EULA/license terms on the official download page before using it in a project.
 * Redistribution rules vary by NDI version. Ensure your final app distribution complies with the SDK’s licensing requirements.
 
+### Android permissions for NDI
+* The app requests **INTERNET**, **ACCESS_NETWORK_STATE**, and **CHANGE_WIFI_MULTICAST_STATE** so NDI can discover senders via multicast and establish network streams on Android devices.
+
 ## AndroidXR/OpenXR setup (Unity + Android)
 
 ### Unity project configuration
