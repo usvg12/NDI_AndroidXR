@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!129 &1
+PlayerSettings:
+  m_ObjectHideFlags: 0
+  serializedVersion: 23
+  productGUID: 00000000000000000000000000000000
+  AndroidTargetSdkVersion: 33
+  AndroidMinSdkVersion: 29
+  AndroidTargetDevices: 0
+  androidEnableSustainedPerformanceMode: 1
+  vrSettings:
+    m_SupportedDevices:
+    - OpenXR
+  scriptingBackend: 1
+  targetFrameRate: 90
+  m_Use32BitDisplayBuffer: 1
+  m_VirtualRealitySupported: 1

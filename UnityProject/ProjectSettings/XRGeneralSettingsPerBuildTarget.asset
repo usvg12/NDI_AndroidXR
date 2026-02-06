@@ -1,0 +1,17 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &1
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7b21f873cf1aa4ad8b7cfa9e5b0f5d7a, type: 3}
+  m_Name: XR General Settings Per Build Target
+  m_EditorClassIdentifier:
+  m_BuildTargetSettings:
+  - m_BuildTarget: Android
+    m_Settings: {fileID: 11400000, guid: 9e1d9fca59a34465a97db50c2c7a8c78, type: 2}
