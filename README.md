@@ -20,9 +20,14 @@
 
 ### Unity project configuration
 1. Use a supported Unity version (verify against AndroidXR/OpenXR documentation and your target headset vendor requirements).
-2. Install the **OpenXR Plugin** in **Package Manager**.
+2. Install the **OpenXR Plugin** in **Package Manager** (use a version that matches your Android XR device/runtime requirements).
 3. In **Project Settings → XR Plug-in Management**, enable **OpenXR** for **Android**.
 4. In **Project Settings → OpenXR**, enable the required interaction profiles and features for your target device.
+5. If you are targeting Android XR runtimes, install the **Android XR Unity package** from the official GitHub repo and follow its setup guidance (it provides Android XR-specific OpenXR features and settings).
+6. For passthrough, confirm that the OpenXR feature/extension needed by your device (for example **XR_ANDROID_composition_layer_passthrough_mesh** or **XR_FB_passthrough**) is available in your OpenXR plugin version and enabled in **Project Settings → OpenXR**.
+
+### XR Interaction Toolkit alignment
+* Unity’s XR Interaction Toolkit 3.x introduces new interaction patterns and improved OpenXR support compared to 2.x. If you plan to use the 3.4 documentation, consider upgrading the project package and validating any API changes in your interaction scripts.
 
 ### AndroidXR tooling
 1. Install **Android Studio** and the **Android SDK/NDK** versions required by your Unity version.
