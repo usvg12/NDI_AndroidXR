@@ -34,6 +34,7 @@ namespace NDI
     {
         [SerializeField] private float reconnectDelaySeconds = 2f;
         [SerializeField] private int maxReconnectAttempts = 5;
+        [SerializeField] private float noFrameTimeoutSeconds = 2f;
 
         public event Action<NDIReceiverState> StateChanged;
         public event Action<string> ErrorChanged;
@@ -50,6 +51,7 @@ namespace NDI
         private Coroutine reconnectCoroutine;
         private Texture2D videoTexture;
         private byte[] frameBuffer;
+        private float lastFrameReceivedTime;
 
 #if NDI_SDK_ENABLED
         private NDIlib.recv_instance_t receiverInstance;
@@ -107,6 +109,7 @@ namespace NDI
         {
             UpdateState(NDIReceiverState.Connecting);
             ClearError();
+            lastFrameReceivedTime = Time.realtimeSinceStartup;
 
 #if !NDI_SDK_ENABLED
             SetError("NDI SDK is not enabled. Define NDI_SDK_ENABLED to activate receiving.");
@@ -138,7 +141,7 @@ namespace NDI
         {
             while (State == NDIReceiverState.Connected)
             {
-                var result = NDIlib.recv_capture_v2(receiverInstance, ref videoFrame, ref audioFrame, ref metadataFrame, 1000);
+                var result = NDIlib.recv_capture_v2(receiverInstance, ref videoFrame, ref audioFrame, ref metadataFrame, 0);
                 if (result == NDIlib.frame_type_e.frame_type_video)
                 {
                     var latestFrame = videoFrame;
@@ -146,13 +149,25 @@ namespace NDI
                     UpdateMetricsFromFrame(latestFrame);
                     UpdateVideoTexture(latestFrame);
                     NDIlib.recv_free_video_v2(receiverInstance, ref latestFrame);
+                    lastFrameReceivedTime = Time.realtimeSinceStartup;
+                }
+                else if (result == NDIlib.frame_type_e.frame_type_audio)
+                {
+                    NDIlib.recv_free_audio_v2(receiverInstance, ref audioFrame);
+                }
+                else if (result == NDIlib.frame_type_e.frame_type_metadata)
+                {
+                    NDIlib.recv_free_metadata(receiverInstance, ref metadataFrame);
                 }
                 else if (result == NDIlib.frame_type_e.frame_type_none)
                 {
-                    SetError("No NDI frames received.");
-                    UpdateState(NDIReceiverState.Reconnecting);
-                    StartReconnectLoop();
-                    yield break;
+                    if (Time.realtimeSinceStartup - lastFrameReceivedTime >= noFrameTimeoutSeconds)
+                    {
+                        SetError("No NDI frames received.");
+                        UpdateState(NDIReceiverState.Reconnecting);
+                        StartReconnectLoop();
+                        yield break;
+                    }
                 }
 
                 yield return null;
@@ -164,13 +179,26 @@ namespace NDI
             while (true)
             {
                 var result = NDIlib.recv_capture_v2(receiverInstance, ref videoFrame, ref audioFrame, ref metadataFrame, 0);
-                if (result != NDIlib.frame_type_e.frame_type_video)
+                if (result == NDIlib.frame_type_e.frame_type_video)
                 {
-                    break;
+                    NDIlib.recv_free_video_v2(receiverInstance, ref latestFrame);
+                    latestFrame = videoFrame;
+                    continue;
                 }
 
-                NDIlib.recv_free_video_v2(receiverInstance, ref latestFrame);
-                latestFrame = videoFrame;
+                if (result == NDIlib.frame_type_e.frame_type_audio)
+                {
+                    NDIlib.recv_free_audio_v2(receiverInstance, ref audioFrame);
+                    continue;
+                }
+
+                if (result == NDIlib.frame_type_e.frame_type_metadata)
+                {
+                    NDIlib.recv_free_metadata(receiverInstance, ref metadataFrame);
+                    continue;
+                }
+
+                break;
             }
         }
 #endif
@@ -227,6 +255,8 @@ namespace NDI
                 Destroy(videoTexture);
                 videoTexture = null;
             }
+
+            frameBuffer = null;
         }
 
 #if NDI_SDK_ENABLED
