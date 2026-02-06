@@ -27,7 +27,7 @@
 6. For passthrough, confirm that the OpenXR feature/extension needed by your device (for example **XR_ANDROID_composition_layer_passthrough_mesh** or **XR_FB_passthrough**) is available in your OpenXR plugin version and enabled in **Project Settings → OpenXR**.
 
 ### XR Interaction Toolkit alignment
-* Unity’s XR Interaction Toolkit 3.x introduces new interaction patterns and improved OpenXR support compared to 2.x. If you plan to use the 3.4 documentation, consider upgrading the project package and validating any API changes in your interaction scripts.
+* Unity’s XR Interaction Toolkit 3.x introduces new interaction patterns and improved OpenXR support compared to 2.x. If you plan to use the 3.4 documentation, upgrade this project to 3.4 first, update `UnityProject/Packages/manifest.json`, and verify any API changes in interaction scripts.
 
 ### AndroidXR tooling
 1. Install **Android Studio** and the **Android SDK/NDK** versions required by your Unity version.
