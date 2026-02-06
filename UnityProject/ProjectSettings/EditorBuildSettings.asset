@@ -8,4 +8,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/AndroidXR.unity
     guid: 0000000000000000f000000000000000
+  - enabled: 1
+    path: Assets/Scenes/MainXR.unity
+    guid: 339af1a83c654c21981930af66348ca3
   m_ConfigObjects: {}
