@@ -8,11 +8,14 @@ namespace Rendering
         [SerializeField] private Renderer targetRenderer;
         [SerializeField] private string textureProperty = "_MainTex";
         [SerializeField] private string sbsModeProperty = "_SBSMode";
+        [SerializeField] private string eyeSwapProperty = "_SwapEyes";
         [SerializeField] private bool sbsEnabled;
+        [SerializeField] private bool swapEyes;
         [SerializeField] private Texture sourceTexture;
 
         private MaterialPropertyBlock propertyBlock;
         private bool lastSbsEnabled;
+        private bool lastSwapEyes;
         private Texture lastTexture;
 
         private void Reset()
@@ -55,6 +58,17 @@ namespace Rendering
             ApplyProperties(force: false);
         }
 
+        public void SetEyeSwap(bool enabled)
+        {
+            if (swapEyes == enabled)
+            {
+                return;
+            }
+
+            swapEyes = enabled;
+            ApplyProperties(force: false);
+        }
+
         public void ApplyProperties(bool force)
         {
             if (targetRenderer == null)
@@ -62,7 +76,7 @@ namespace Rendering
                 return;
             }
 
-            if (!force && lastSbsEnabled == sbsEnabled && lastTexture == sourceTexture)
+            if (!force && lastSbsEnabled == sbsEnabled && lastSwapEyes == swapEyes && lastTexture == sourceTexture)
             {
                 return;
             }
@@ -74,6 +88,7 @@ namespace Rendering
 
             targetRenderer.GetPropertyBlock(propertyBlock);
             propertyBlock.SetFloat(sbsModeProperty, sbsEnabled ? 1f : 0f);
+            propertyBlock.SetFloat(eyeSwapProperty, swapEyes ? 1f : 0f);
             if (sourceTexture != null)
             {
                 propertyBlock.SetTexture(textureProperty, sourceTexture);
@@ -81,6 +96,7 @@ namespace Rendering
             targetRenderer.SetPropertyBlock(propertyBlock);
 
             lastSbsEnabled = sbsEnabled;
+            lastSwapEyes = swapEyes;
             lastTexture = sourceTexture;
         }
     }
