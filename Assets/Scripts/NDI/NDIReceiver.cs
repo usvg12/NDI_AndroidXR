@@ -37,14 +37,17 @@ namespace NDI
         public event Action<NDIReceiverState> StateChanged;
         public event Action<string> ErrorChanged;
         public event Action<NDIFrameMetrics> MetricsUpdated;
+        public event Action<Texture> VideoFrameReady;
 
         public NDIReceiverState State { get; private set; } = NDIReceiverState.Idle;
         public string ErrorMessage { get; private set; }
         public bool HasError => !string.IsNullOrEmpty(ErrorMessage);
         public NDIFrameMetrics Metrics { get; private set; }
         public NDISourceInfo SelectedSource { get; private set; }
+        public Texture VideoTexture => videoTexture;
 
         private Coroutine reconnectCoroutine;
+        private Texture2D videoTexture;
 
 #if NDI_SDK_ENABLED
         private NDIlib.recv_instance_t receiverInstance;
@@ -137,6 +140,7 @@ namespace NDI
                 if (result == NDIlib.frame_type_e.frame_type_video)
                 {
                     UpdateMetricsFromFrame(videoFrame);
+                    UpdateVideoTextureFromFrame(videoFrame);
                     NDIlib.recv_free_video_v2(receiverInstance, ref videoFrame);
                 }
                 else if (result == NDIlib.frame_type_e.frame_type_none)
@@ -198,6 +202,11 @@ namespace NDI
                 receiverInstance = IntPtr.Zero;
             }
 #endif
+            if (videoTexture != null)
+            {
+                Destroy(videoTexture);
+                videoTexture = null;
+            }
         }
 
 #if NDI_SDK_ENABLED
@@ -213,6 +222,57 @@ namespace NDI
 
             Metrics = metrics;
             MetricsUpdated?.Invoke(metrics);
+        }
+
+        private void UpdateVideoTextureFromFrame(NDIlib.video_frame_v2_t frame)
+        {
+            if (frame.p_data == IntPtr.Zero || frame.xres <= 0 || frame.yres <= 0)
+            {
+                return;
+            }
+
+            if (!TryGetTextureFormat(frame.FourCC, out var textureFormat))
+            {
+                return;
+            }
+
+            if (videoTexture == null
+                || videoTexture.width != frame.xres
+                || videoTexture.height != frame.yres
+                || videoTexture.format != textureFormat)
+            {
+                if (videoTexture != null)
+                {
+                    Destroy(videoTexture);
+                }
+
+                videoTexture = new Texture2D(frame.xres, frame.yres, textureFormat, false)
+                {
+                    wrapMode = TextureWrapMode.Clamp,
+                    filterMode = FilterMode.Bilinear
+                };
+            }
+
+            var dataSize = frame.line_stride_in_bytes * frame.yres;
+            videoTexture.LoadRawTextureData(frame.p_data, dataSize);
+            videoTexture.Apply(false, false);
+            VideoFrameReady?.Invoke(videoTexture);
+        }
+
+        private static bool TryGetTextureFormat(NDIlib.FourCC_type_e fourCC, out TextureFormat textureFormat)
+        {
+            switch (fourCC)
+            {
+                case NDIlib.FourCC_type_e.FourCC_type_BGRA:
+                    textureFormat = TextureFormat.BGRA32;
+                    return true;
+                case NDIlib.FourCC_type_e.FourCC_type_RGBA:
+                    textureFormat = TextureFormat.RGBA32;
+                    return true;
+                default:
+                    textureFormat = TextureFormat.RGBA32;
+                    return false;
+            }
         }
 #endif
 
