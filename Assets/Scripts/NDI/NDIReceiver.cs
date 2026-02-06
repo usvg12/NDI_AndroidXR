@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections;
+using System.Runtime.InteropServices;
 using UnityEngine;
 
 #if NDI_SDK_ENABLED
@@ -37,14 +38,18 @@ namespace NDI
         public event Action<NDIReceiverState> StateChanged;
         public event Action<string> ErrorChanged;
         public event Action<NDIFrameMetrics> MetricsUpdated;
+        public event Action<Texture2D> FrameUpdated;
 
         public NDIReceiverState State { get; private set; } = NDIReceiverState.Idle;
         public string ErrorMessage { get; private set; }
         public bool HasError => !string.IsNullOrEmpty(ErrorMessage);
         public NDIFrameMetrics Metrics { get; private set; }
         public NDISourceInfo SelectedSource { get; private set; }
+        public Texture2D VideoTexture => videoTexture;
 
         private Coroutine reconnectCoroutine;
+        private Texture2D videoTexture;
+        private byte[] frameBuffer;
 
 #if NDI_SDK_ENABLED
         private NDIlib.recv_instance_t receiverInstance;
@@ -136,8 +141,11 @@ namespace NDI
                 var result = NDIlib.recv_capture_v2(receiverInstance, ref videoFrame, ref audioFrame, ref metadataFrame, 1000);
                 if (result == NDIlib.frame_type_e.frame_type_video)
                 {
-                    UpdateMetricsFromFrame(videoFrame);
-                    NDIlib.recv_free_video_v2(receiverInstance, ref videoFrame);
+                    var latestFrame = videoFrame;
+                    DrainToLatestFrame(ref latestFrame);
+                    UpdateMetricsFromFrame(latestFrame);
+                    UpdateVideoTexture(latestFrame);
+                    NDIlib.recv_free_video_v2(receiverInstance, ref latestFrame);
                 }
                 else if (result == NDIlib.frame_type_e.frame_type_none)
                 {
@@ -148,6 +156,21 @@ namespace NDI
                 }
 
                 yield return null;
+            }
+        }
+
+        private void DrainToLatestFrame(ref NDIlib.video_frame_v2_t latestFrame)
+        {
+            while (true)
+            {
+                var result = NDIlib.recv_capture_v2(receiverInstance, ref videoFrame, ref audioFrame, ref metadataFrame, 0);
+                if (result != NDIlib.frame_type_e.frame_type_video)
+                {
+                    break;
+                }
+
+                NDIlib.recv_free_video_v2(receiverInstance, ref latestFrame);
+                latestFrame = videoFrame;
             }
         }
 #endif
@@ -198,21 +221,79 @@ namespace NDI
                 receiverInstance = IntPtr.Zero;
             }
 #endif
+
+            if (videoTexture != null)
+            {
+                Destroy(videoTexture);
+                videoTexture = null;
+            }
         }
 
 #if NDI_SDK_ENABLED
         private void UpdateMetricsFromFrame(NDIlib.video_frame_v2_t frame)
         {
+            var latencyTicks = NDIlib.util_clock() - frame.timestamp;
             var metrics = new NDIFrameMetrics
             {
                 Width = frame.xres,
                 Height = frame.yres,
                 FramesPerSecond = frame.frame_rate_N > 0 ? frame.frame_rate_N / (float)frame.frame_rate_D : 0f,
-                LatencyMilliseconds = frame.timestamp / 10000f
+                LatencyMilliseconds = Mathf.Max(0f, latencyTicks / 10000f)
             };
 
             Metrics = metrics;
             MetricsUpdated?.Invoke(metrics);
+        }
+
+        private void UpdateVideoTexture(NDIlib.video_frame_v2_t frame)
+        {
+            if (frame.xres <= 0 || frame.yres <= 0 || frame.p_data == IntPtr.Zero)
+            {
+                return;
+            }
+
+            var bytesPerPixel = frame.line_stride_in_bytes / frame.xres;
+            if (bytesPerPixel != 4)
+            {
+                return;
+            }
+
+            var expectedSize = frame.xres * frame.yres * bytesPerPixel;
+            if (frameBuffer == null || frameBuffer.Length != expectedSize)
+            {
+                frameBuffer = new byte[expectedSize];
+            }
+
+            if (frame.line_stride_in_bytes == frame.xres * bytesPerPixel)
+            {
+                Marshal.Copy(frame.p_data, frameBuffer, 0, frameBuffer.Length);
+            }
+            else
+            {
+                for (var row = 0; row < frame.yres; row++)
+                {
+                    var offset = row * frame.line_stride_in_bytes;
+                    Marshal.Copy(IntPtr.Add(frame.p_data, offset), frameBuffer, row * frame.xres * bytesPerPixel, frame.xres * bytesPerPixel);
+                }
+            }
+
+            if (videoTexture == null || videoTexture.width != frame.xres || videoTexture.height != frame.yres)
+            {
+                if (videoTexture != null)
+                {
+                    Destroy(videoTexture);
+                }
+
+                videoTexture = new Texture2D(frame.xres, frame.yres, TextureFormat.BGRA32, false)
+                {
+                    wrapMode = TextureWrapMode.Clamp,
+                    filterMode = FilterMode.Bilinear
+                };
+            }
+
+            videoTexture.LoadRawTextureData(frameBuffer);
+            videoTexture.Apply(false);
+            FrameUpdated?.Invoke(videoTexture);
         }
 #endif
 
