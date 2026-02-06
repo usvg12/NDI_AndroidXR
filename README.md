@@ -24,7 +24,8 @@
 3. In **Project Settings → XR Plug-in Management**, enable **OpenXR** for **Android**.
 4. In **Project Settings → OpenXR**, enable the required interaction profiles and features for your target device.
 5. The **Android XR Unity package** is an optional external dependency. If you are targeting Android XR runtimes, install it from the official GitHub repo (https://github.com/android/android-xr-unity) and follow its setup guidance (it provides Android XR-specific OpenXR features and settings). In Unity, open **Window → Package Manager → + → Add package from git URL…** and paste the repo URL (or the specific package URL if the repo instructs a subpath).
-6. For passthrough, confirm that the OpenXR feature/extension needed by your device (for example **XR_ANDROID_composition_layer_passthrough_mesh** or **XR_FB_passthrough**) is available in your OpenXR plugin version and enabled in **Project Settings → OpenXR**.
+6. Android XR requires Android-specific OpenXR instance extensions. Ensure **XR_KHR_android_create_instance** and **XR_KHR_android_surface_swapchain** are enabled in **Project Settings → OpenXR → Instance Extensions**.
+7. For passthrough, confirm that the OpenXR feature/extension needed by your device (for example **XR_ANDROID_composition_layer_passthrough_mesh** or **XR_FB_passthrough**) is available in your OpenXR plugin version and enabled in **Project Settings → OpenXR**.
 
 ### XR Interaction Toolkit alignment
 * Unity’s XR Interaction Toolkit 3.x introduces new interaction patterns and improved OpenXR support compared to 2.x. If you plan to use the 3.4 documentation, upgrade this project to 3.4 first, update `UnityProject/Packages/manifest.json`, and verify any API changes in interaction scripts.
