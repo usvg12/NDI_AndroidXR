@@ -1,0 +1,4 @@
+Open this folder as the Unity project.
+
+Path: UnityProject/
+This repository's root is not a Unity project and should not be opened in Unity.

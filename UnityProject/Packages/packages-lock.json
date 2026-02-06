@@ -1,5 +1,11 @@
 {
   "dependencies": {
+    "com.android.xr.openxr": {
+      "version": "https://github.com/android/android-xr-unity.git?path=/Packages/com.android.xr.openxr",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {}
+    },
     "com.unity.collab-proxy": {
       "version": "2.0.5",
       "depth": 0,

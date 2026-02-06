@@ -1,5 +1,7 @@
 # NDI_AndroidXR
 
+> **Unity project location:** Open the Unity project from `UnityProject/` (this is the folder Unity should load). The repository root contains a placeholder `Assets/` tree and **should not** be opened as the Unity project.
+
 ## NDI SDK integration (Unity)
 
 ### Where to download
@@ -12,9 +14,22 @@
 3. Click **+ → Add package from disk…** and select the SDK `package.json` (or import the provided `.unitypackage` if that is what the SDK contains).
 4. Confirm that the NDI plugin appears in **Project → Assets** and that any native libraries for Android are present in the imported package.
 
+### Enable NDI scripting define symbols
+* In **Project Settings → Player → Other Settings → Scripting Define Symbols**, add `NDI_SDK_ENABLED` for the target build group (for example, **Android**). The receiver scripts are wrapped in `#if NDI_SDK_ENABLED` and will no-op without it.
+
+### Android native libraries
+* From the NewTek NDI SDK for Unity/Android, copy the Android native libraries into your Unity project under `Assets/Plugins/Android/` with ABI subfolders. For example:
+  * `Assets/Plugins/Android/arm64-v8a/libndi.so`
+  * `Assets/Plugins/Android/arm64-v8a/libndi_sdk.so`
+  * Repeat for any additional ABIs you support (e.g., `armeabi-v7a`).
+* In the Unity Editor, select each `.so` and ensure the **Plugin Import Settings** target **Android** (and the proper CPU architecture).
+
 ### Licensing notes
 * NDI is a proprietary SDK. You must review and accept the NDI SDK EULA/license terms on the official download page before using it in a project.
 * Redistribution rules vary by NDI version. Ensure your final app distribution complies with the SDK’s licensing requirements.
+
+### Android permissions for NDI
+* The app requests **INTERNET**, **ACCESS_NETWORK_STATE**, and **CHANGE_WIFI_MULTICAST_STATE** so NDI can discover senders via multicast and establish network streams on Android devices.
 
 ## AndroidXR/OpenXR setup (Unity + Android)
 
