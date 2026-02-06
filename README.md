@@ -2,6 +2,11 @@
 
 > **Unity project location:** Open the Unity project from `UnityProject/` (this is the folder Unity should load). The repository root contains a placeholder `Assets/` tree and **should not** be opened as the Unity project.
 
+## Repository layout (normalized root)
+* `UnityProject/` is the **only** Unity project folder that should be opened in the Unity Editor.
+* `Assets/` at the repo root is a placeholder and should be ignored by Unity.
+* `Packages/` at the repo root contains shared package configuration; the Unity project also has its own `UnityProject/Packages/`.
+
 ## NDI SDK integration (Unity)
 
 ### Where to download
@@ -15,11 +20,17 @@
 4. Confirm that the NDI plugin appears in **Project → Assets** and that any native libraries for Android are present in the imported package.
 
 ### Enable NDI scripting define symbols
-* In **Project Settings → Player → Other Settings → Scripting Define Symbols**, add `NDI_SDK_ENABLED` for the target build group (for example, **Android**). The receiver scripts are wrapped in `#if NDI_SDK_ENABLED` and will no-op without it.
+* **Preferred (asmdef)**: In the assembly definition that contains the NDI scripts, add a **Version Define** (Assembly Definition → Inspector → Version Defines) with:
+  * **Name**: `NDI_SDK_ENABLED`
+  * **Expression**: `true`
+  * **Define**: `NDI_SDK_ENABLED`
+  * Scope it to the **Android** platform if desired.
+* **Fallback (Player Settings)**: In **Project Settings → Player → Other Settings → Scripting Define Symbols**, add `NDI_SDK_ENABLED` for the target build group (for example, **Android**).
+* The receiver/discovery scripts are wrapped in `#if NDI_SDK_ENABLED` and will no-op without it.
 
 ### Android native libraries
 * From the NewTek NDI SDK for Unity/Android, copy the Android native libraries into your Unity project under `Assets/Plugins/Android/` with ABI subfolders. For example:
-  * `Assets/Plugins/Android/arm64-v8a/libndi.so`
+  * **ARM64**: `Assets/Plugins/Android/arm64-v8a/libndi.so`
   * `Assets/Plugins/Android/arm64-v8a/libndi_sdk.so`
   * Repeat for any additional ABIs you support (e.g., `armeabi-v7a`).
 * In the Unity Editor, select each `.so` and ensure the **Plugin Import Settings** target **Android** (and the proper CPU architecture).
@@ -57,6 +68,12 @@
 
 ## Build & deployment (APK generation + installation)
 
+### Required build settings (Android)
+* **Scripting Backend**: IL2CPP.
+* **Target Architectures**: ARM64 enabled.
+* **Texture Compression**: ASTC.
+* **Internet Access**: Require (Project Settings → Player → Other Settings).
+
 ### Generate an APK in Unity
 1. Open **File → Build Settings**.
 2. Select **Android** and click **Switch Platform** (if needed).
@@ -84,3 +101,13 @@
 * **Black screen or app immediately closes**: Check device logs with `adb logcat` to identify missing permissions, missing native libs, or OpenXR runtime issues.
 * **NDI stream not visible**: Verify network connectivity, NDI sender availability, and that the device is on the same subnet as the sender.
 * **Controller input not working**: Confirm the correct OpenXR interaction profiles are enabled and that the runtime is active on the headset.
+
+### Common NDI failure modes
+* **“No sources”**: Discovery is empty when `NDI_SDK_ENABLED` is missing, multicast is blocked, or the device is on a different subnet/VLAN. Ensure multicast is allowed and `CHANGE_WIFI_MULTICAST_STATE` is granted. Many enterprise Wi-Fi networks disable mDNS/NDI discovery by default.
+* **“Connected but no image”**: Source appears but no frames arrive. Check that the sender is outputting video (not audio-only), confirm the sender/receiver are on the same subnet, and verify Wi-Fi multicast/unicast traffic is not throttled.
+* **`DllNotFoundException`**: Missing or mislocated `.so` libraries, or ABI mismatch. Confirm the library path is `Assets/Plugins/Android/arm64-v8a/libndi.so` (and any companion libs) and that ARM64 is enabled.
+* **Multicast blocked**: Discovery works on desktop but not on device. Ensure the Android manifest includes **CHANGE_WIFI_MULTICAST_STATE**, the app has Internet Access = Require, and that the network allows multicast/broadcast.
+
+### Logcat filtering guidance
+* Unity logs use the `Unity` tag. Filter with: `adb logcat -s Unity`.
+* To narrow to NDI messages, pipe through a regex filter: `adb logcat -s Unity | rg -i "ndi|receiver|source"`.
