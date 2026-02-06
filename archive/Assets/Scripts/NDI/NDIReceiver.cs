@@ -34,6 +34,7 @@ namespace NDI
     {
         [SerializeField] private float reconnectDelaySeconds = 2f;
         [SerializeField] private int maxReconnectAttempts = 5;
+        [SerializeField] private float noFrameTimeoutSeconds = 2f;
 
         public event Action<NDIReceiverState> StateChanged;
         public event Action<string> ErrorChanged;
@@ -49,6 +50,7 @@ namespace NDI
 
         private Coroutine reconnectCoroutine;
         private Texture2D videoTexture;
+        private float lastFrameReceivedTime;
         private byte[] frameBuffer;
 
 #if NDI_SDK_ENABLED
@@ -107,6 +109,7 @@ namespace NDI
         {
             UpdateState(NDIReceiverState.Connecting);
             ClearError();
+            lastFrameReceivedTime = Time.realtimeSinceStartup;
 
 #if !NDI_SDK_ENABLED
             SetError("NDI SDK is not enabled. Define NDI_SDK_ENABLED to activate receiving.");
@@ -138,12 +141,15 @@ namespace NDI
         {
             while (State == NDIReceiverState.Connected)
             {
-                var result = NDIlib.recv_capture_v2(receiverInstance, ref videoFrame, ref audioFrame, ref metadataFrame, 1000);
+                var result = NDIlib.recv_capture_v2(receiverInstance, ref videoFrame, ref audioFrame, ref metadataFrame, 0);
                 if (result == NDIlib.frame_type_e.frame_type_video)
                 {
-                    UpdateMetricsFromFrame(videoFrame);
-                    UpdateVideoTextureFromFrame(videoFrame);
-                    NDIlib.recv_free_video_v2(receiverInstance, ref videoFrame);
+                    var latestFrame = videoFrame;
+                    DrainToLatestFrame(ref latestFrame);
+                    UpdateMetricsFromFrame(latestFrame);
+                    UpdateVideoTextureFromFrame(latestFrame);
+                    NDIlib.recv_free_video_v2(receiverInstance, ref latestFrame);
+                    lastFrameReceivedTime = Time.realtimeSinceStartup;
                 }
                 else if (result == NDIlib.frame_type_e.frame_type_audio)
                 {
@@ -155,13 +161,44 @@ namespace NDI
                 }
                 else if (result == NDIlib.frame_type_e.frame_type_none)
                 {
-                    SetError("No NDI frames received.");
-                    UpdateState(NDIReceiverState.Reconnecting);
-                    StartReconnectLoop();
-                    yield break;
+                    if (Time.realtimeSinceStartup - lastFrameReceivedTime >= noFrameTimeoutSeconds)
+                    {
+                        SetError("No NDI frames received.");
+                        UpdateState(NDIReceiverState.Reconnecting);
+                        StartReconnectLoop();
+                        yield break;
+                    }
                 }
 
                 yield return null;
+            }
+        }
+
+        private void DrainToLatestFrame(ref NDIlib.video_frame_v2_t latestFrame)
+        {
+            while (true)
+            {
+                var result = NDIlib.recv_capture_v2(receiverInstance, ref videoFrame, ref audioFrame, ref metadataFrame, 0);
+                if (result == NDIlib.frame_type_e.frame_type_video)
+                {
+                    NDIlib.recv_free_video_v2(receiverInstance, ref latestFrame);
+                    latestFrame = videoFrame;
+                    continue;
+                }
+
+                if (result == NDIlib.frame_type_e.frame_type_audio)
+                {
+                    NDIlib.recv_free_audio_v2(receiverInstance, ref audioFrame);
+                    continue;
+                }
+
+                if (result == NDIlib.frame_type_e.frame_type_metadata)
+                {
+                    NDIlib.recv_free_metadata(receiverInstance, ref metadataFrame);
+                    continue;
+                }
+
+                break;
             }
         }
 #endif
@@ -225,12 +262,13 @@ namespace NDI
 #if NDI_SDK_ENABLED
         private void UpdateMetricsFromFrame(NDIlib.video_frame_v2_t frame)
         {
+            var latencyTicks = NDIlib.util_clock() - frame.timestamp;
             var metrics = new NDIFrameMetrics
             {
                 Width = frame.xres,
                 Height = frame.yres,
                 FramesPerSecond = frame.frame_rate_N > 0 ? frame.frame_rate_N / (float)frame.frame_rate_D : 0f,
-                LatencyMilliseconds = frame.timestamp / 10000f
+                LatencyMilliseconds = Mathf.Max(0f, latencyTicks / 10000f)
             };
 
             Metrics = metrics;
