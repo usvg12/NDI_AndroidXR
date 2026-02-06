@@ -1,0 +1,16 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &1
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b6b2b5fd34664a1f9c8f1cbdb3b6fcb, type: 3}
+  m_Name: XR General Settings
+  m_EditorClassIdentifier:
+  m_Manager: {fileID: 11400000, guid: 9e1d9fca59a34465a97db50c2c7a8c78, type: 2}
+  m_InitManagerOnStart: 1
