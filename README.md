@@ -1,1 +1,66 @@
 # NDI_AndroidXR
+
+## NDI SDK integration (Unity)
+
+### Where to download
+1. Go to the official NDI SDK downloads page: https://ndi.video/tools/ndi-sdk/
+2. Download the **NDI 5 SDK for Unity** (or the latest Unity package for NDI Tools/SDK).
+
+### Import into Unity
+1. Unzip the downloaded SDK.
+2. In Unity, open **Window → Package Manager**.
+3. Click **+ → Add package from disk…** and select the SDK `package.json` (or import the provided `.unitypackage` if that is what the SDK contains).
+4. Confirm that the NDI plugin appears in **Project → Assets** and that any native libraries for Android are present in the imported package.
+
+### Licensing notes
+* NDI is a proprietary SDK. You must review and accept the NDI SDK EULA/license terms on the official download page before using it in a project.
+* Redistribution rules vary by NDI version. Ensure your final app distribution complies with the SDK’s licensing requirements.
+
+## AndroidXR/OpenXR setup (Unity + Android)
+
+### Unity project configuration
+1. Use a supported Unity version (verify against AndroidXR/OpenXR documentation and your target headset vendor requirements).
+2. Install the **OpenXR Plugin** in **Package Manager**.
+3. In **Project Settings → XR Plug-in Management**, enable **OpenXR** for **Android**.
+4. In **Project Settings → OpenXR**, enable the required interaction profiles and features for your target device.
+
+### AndroidXR tooling
+1. Install **Android Studio** and the **Android SDK/NDK** versions required by your Unity version.
+2. In **Unity → Preferences → External Tools**, point Unity to the Android SDK/NDK/JDK paths.
+3. Enable **ARM64** (and other required ABIs) in **Project Settings → Player → Other Settings**.
+
+### Samsung Galaxy XR build requirements
+* Use the headset vendor’s recommended Unity version, Android API level, and OpenXR feature set.
+* Ensure **ARM64** is enabled and that any vendor-specific OpenXR extensions are turned on.
+* If the headset requires a **developer mode** or **device registration**, complete those steps before deployment.
+* Verify your headset OS build and firmware version meet the minimum required by the vendor’s OpenXR runtime.
+
+## Build & deployment (APK generation + installation)
+
+### Generate an APK in Unity
+1. Open **File → Build Settings**.
+2. Select **Android** and click **Switch Platform** (if needed).
+3. Ensure **XR Plug-in Management → OpenXR** is enabled for Android.
+4. In **Player Settings → Publishing Settings**, configure your keystore and signing credentials.
+5. Click **Build** to generate the APK.
+
+### Install to headset
+1. Enable **Developer Options** and **USB debugging** on the headset.
+2. Connect the headset via USB and verify it appears in `adb devices`.
+3. Install the APK:
+   ```bash
+   adb install -r path/to/YourApp.apk
+   ```
+4. Launch the app from the headset’s app launcher.
+
+## Troubleshooting
+
+### Build issues
+* **Gradle/SDK errors**: Confirm Unity’s Android SDK/NDK/JDK paths are correct in **Preferences → External Tools** and that the versions match Unity’s requirements.
+* **OpenXR plugin errors**: Ensure the OpenXR package is installed and enabled for Android in **XR Plug-in Management**.
+* **ABI mismatch**: Confirm **ARM64** is enabled and that your NDI native libs include matching Android binaries.
+
+### Runtime issues
+* **Black screen or app immediately closes**: Check device logs with `adb logcat` to identify missing permissions, missing native libs, or OpenXR runtime issues.
+* **NDI stream not visible**: Verify network connectivity, NDI sender availability, and that the device is on the same subnet as the sender.
+* **Controller input not working**: Confirm the correct OpenXR interaction profiles are enabled and that the runtime is active on the headset.
