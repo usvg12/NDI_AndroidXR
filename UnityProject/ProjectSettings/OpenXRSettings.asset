@@ -16,6 +16,7 @@ MonoBehaviour:
   m_depthSubmissionMode: 1
   m_instanceExtensions:
   - XR_KHR_android_create_instance
+  - XR_KHR_android_surface_swapchain
   - XR_EXT_hand_tracking
   - XR_EXT_eye_gaze_interaction
   - XR_EXT_hand_interaction

@@ -12,6 +12,7 @@
     "com.unity.ugui": "1.0.0",
     "com.unity.xr.interaction.toolkit": "2.5.2",
     "com.unity.xr.management": "4.4.0",
-    "com.unity.xr.openxr": "1.8.2"
+    "com.unity.xr.openxr": "1.8.2",
+    "com.android.xr.openxr": "https://github.com/android/android-xr-unity.git?path=/Packages/com.android.xr.openxr"
   }
 }
