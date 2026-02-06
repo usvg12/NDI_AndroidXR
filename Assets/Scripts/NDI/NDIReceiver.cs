@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections;
+using System.Runtime.InteropServices;
 using UnityEngine;
 
 #if NDI_SDK_ENABLED
@@ -50,6 +51,7 @@ namespace NDI
         private Coroutine reconnectCoroutine;
         private Texture2D videoTexture;
         private float lastFrameReceivedTime;
+        private byte[] frameBuffer;
 
 #if NDI_SDK_ENABLED
         private NDIlib.recv_instance_t receiverInstance;
@@ -254,6 +256,7 @@ namespace NDI
                 videoTexture = null;
             }
 
+            frameBuffer = null;
         }
 
 #if NDI_SDK_ENABLED
@@ -284,6 +287,12 @@ namespace NDI
                 return;
             }
 
+            var bytesPerPixel = textureFormat == TextureFormat.BGRA32 || textureFormat == TextureFormat.RGBA32 ? 4 : 0;
+            if (bytesPerPixel == 0)
+            {
+                return;
+            }
+
             if (videoTexture == null
                 || videoTexture.width != frame.xres
                 || videoTexture.height != frame.yres
@@ -301,8 +310,27 @@ namespace NDI
                 };
             }
 
-            var dataSize = frame.line_stride_in_bytes * frame.yres;
-            videoTexture.LoadRawTextureData(frame.p_data, dataSize);
+            var rowSize = frame.xres * bytesPerPixel;
+            var dataSize = rowSize * frame.yres;
+            if (frame.line_stride_in_bytes == rowSize)
+            {
+                videoTexture.LoadRawTextureData(frame.p_data, dataSize);
+            }
+            else
+            {
+                if (frameBuffer == null || frameBuffer.Length != dataSize)
+                {
+                    frameBuffer = new byte[dataSize];
+                }
+
+                for (var row = 0; row < frame.yres; row++)
+                {
+                    var offset = row * frame.line_stride_in_bytes;
+                    Marshal.Copy(IntPtr.Add(frame.p_data, offset), frameBuffer, row * rowSize, rowSize);
+                }
+
+                videoTexture.LoadRawTextureData(frameBuffer);
+            }
             videoTexture.Apply(false, false);
             VideoFrameReady?.Invoke(videoTexture);
         }
