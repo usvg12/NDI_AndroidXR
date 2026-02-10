@@ -57,6 +57,7 @@ namespace NDI
         private NDIlib.video_frame_v2_t videoFrame;
         private NDIlib.audio_frame_v2_t audioFrame;
         private NDIlib.metadata_frame_t metadataFrame;
+        private bool hasSdkLifetimeAcquire;
 #endif
 
         private void OnDisable()
@@ -172,11 +173,13 @@ namespace NDI
             CleanupReceiver();
             ClearError();
 
-            if (!NDIlib.initialize())
+            if (!NdiSdkLifetime.TryAcquire())
             {
-                SetError("Failed to initialize NDI SDK.");
+                SetError("Failed to initialize NDI SDK global lifetime.");
                 return false;
             }
+
+            hasSdkLifetimeAcquire = true;
 
             receiverConfig = new NDIlib.recv_create_v3_t
             {
@@ -193,6 +196,12 @@ namespace NDI
             receiverInstance = NDIlib.recv_create_v3(ref receiverConfig);
             if (receiverInstance == IntPtr.Zero)
             {
+                if (hasSdkLifetimeAcquire)
+                {
+                    NdiSdkLifetime.Release();
+                    hasSdkLifetimeAcquire = false;
+                }
+
                 SetError("Failed to create NDI receiver.");
                 return false;
             }
@@ -210,6 +219,12 @@ namespace NDI
             {
                 NDIlib.recv_destroy(receiverInstance);
                 receiverInstance = IntPtr.Zero;
+            }
+
+            if (hasSdkLifetimeAcquire)
+            {
+                NdiSdkLifetime.Release();
+                hasSdkLifetimeAcquire = false;
             }
 #endif
 
