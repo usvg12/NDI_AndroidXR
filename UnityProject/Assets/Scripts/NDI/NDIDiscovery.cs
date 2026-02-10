@@ -28,6 +28,7 @@ namespace NDI
 
 #if NDI_SDK_ENABLED
         private NDIlib.finder_instance_t finderInstance;
+        private bool hasSdkLifetimeAcquire;
 #endif
 
         private void OnEnable()
@@ -138,17 +139,26 @@ namespace NDI
         private void InitializeNdi()
         {
 #if NDI_SDK_ENABLED
-            if (!NDIlib.initialize())
+            if (!NdiSdkLifetime.TryAcquire())
             {
-                LastError = "Failed to initialize NDI SDK.";
+                LastError = "Failed to initialize NDI SDK global lifetime.";
+                Debug.LogError(LastError);
                 IsServiceAvailable = false;
                 return;
             }
+
+            hasSdkLifetimeAcquire = true;
 
             finderInstance = NDIlib.finder_create_v2();
             IsServiceAvailable = finderInstance != IntPtr.Zero;
             if (!IsServiceAvailable)
             {
+                if (hasSdkLifetimeAcquire)
+                {
+                    NdiSdkLifetime.Release();
+                    hasSdkLifetimeAcquire = false;
+                }
+
                 LastError = "Failed to create NDI finder instance.";
             }
 #endif
@@ -161,6 +171,12 @@ namespace NDI
             {
                 NDIlib.finder_destroy(finderInstance);
                 finderInstance = IntPtr.Zero;
+            }
+
+            if (hasSdkLifetimeAcquire)
+            {
+                NdiSdkLifetime.Release();
+                hasSdkLifetimeAcquire = false;
             }
 #endif
         }
