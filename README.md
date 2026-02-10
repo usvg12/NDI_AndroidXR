@@ -2,6 +2,11 @@
 
 > **Unity project location:** Open the Unity project from `UnityProject/` (this is the folder Unity should load). The repository root contains a placeholder `Assets/` tree and **should not** be opened as the Unity project.
 
+## Contributor note
+* Runtime Unity content is maintained under `UnityProject/Assets/`.
+* Do **not** edit or add C# scripts under root `Assets/Scripts/`; that folder is a placeholder only.
+* Run `./scripts/lint-root-assets.sh` before committing to verify root `Assets/` has no C# scripts.
+
 ## Repository layout (normalized root)
 * `UnityProject/` is the **only** Unity project folder that should be opened in the Unity Editor.
 * `Assets/` at the repo root is a placeholder and should be ignored by Unity.
