@@ -19,6 +19,7 @@ namespace NDI
 
         [Header("UI (Auto-Built)")]
         [SerializeField] private bool autoBuildUi = true;
+        [SerializeField] private bool allowEditModeAutoSetup = false;
         [SerializeField] private Canvas controlCanvas;
         [SerializeField] private Dropdown sourceDropdown;
         [SerializeField] private InputField manualNameInput;
@@ -42,6 +43,55 @@ namespace NDI
 
         private void OnEnable()
         {
+            ResolveDependencies();
+
+            if (autoBuildUi && controlCanvas == null && (Application.isPlaying || allowEditModeAutoSetup))
+            {
+                BuildDefaultUi();
+            }
+
+            if (!Application.isPlaying)
+            {
+                RefreshUiState();
+                return;
+            }
+
+            HookUiEvents();
+            HookNdiEvents();
+            RefreshUiState();
+        }
+
+        private void OnDisable()
+        {
+            UnhookUiEvents();
+            UnhookNdiEvents();
+        }
+
+        private void Update()
+        {
+            if (!Application.isPlaying)
+            {
+                return;
+            }
+
+            UpdateStatsText();
+        }
+
+        [ContextMenu("Apply Setup Now")]
+        private void ApplySetupNow()
+        {
+            ResolveDependencies();
+
+            if (controlCanvas == null)
+            {
+                BuildDefaultUi(forceInEditMode: true);
+            }
+
+            RefreshUiState();
+        }
+
+        private void ResolveDependencies()
+        {
             if (discovery == null)
             {
                 discovery = GetComponent<NDIDiscovery>();
@@ -61,26 +111,6 @@ namespace NDI
             {
                 panelTransform = sbsRenderer.transform;
             }
-
-            if (autoBuildUi && controlCanvas == null)
-            {
-                BuildDefaultUi();
-            }
-
-            HookUiEvents();
-            HookNdiEvents();
-            RefreshUiState();
-        }
-
-        private void OnDisable()
-        {
-            UnhookUiEvents();
-            UnhookNdiEvents();
-        }
-
-        private void Update()
-        {
-            UpdateStatsText();
         }
 
         private void HookNdiEvents()
@@ -349,8 +379,13 @@ namespace NDI
                 $"Dropped Frames: {droppedFrames}";
         }
 
-        private void BuildDefaultUi()
+        private void BuildDefaultUi(bool forceInEditMode = false)
         {
+            if (!Application.isPlaying && !allowEditModeAutoSetup && !forceInEditMode)
+            {
+                return;
+            }
+
             var font = Resources.GetBuiltinResource<Font>("Arial.ttf");
 
             var canvasObject = new GameObject("NDI Control Canvas", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
