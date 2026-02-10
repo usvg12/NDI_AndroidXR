@@ -10,19 +10,37 @@ namespace NDI
     {
         [SerializeField] private bool ensureCollider = true;
         [SerializeField] private Vector3 colliderSize = new Vector3(1f, 1f, 0.02f);
+        [SerializeField] private bool allowEditModeAutoSetup = false;
 
         private void Reset()
         {
-            EnsureSetup();
+            var boxCollider = GetComponent<BoxCollider>();
+            if (boxCollider != null)
+            {
+                colliderSize = boxCollider.size;
+            }
         }
 
         private void OnEnable()
         {
-            EnsureSetup();
+            if (Application.isPlaying || allowEditModeAutoSetup)
+            {
+                EnsureSetup();
+            }
         }
 
-        private void EnsureSetup()
+        [ContextMenu("Apply Setup Now")]
+        private void ApplySetupNow()
         {
+            EnsureSetup(forceInEditMode: true);
+        }
+
+        private void EnsureSetup(bool forceInEditMode = false)
+        {
+            if (!Application.isPlaying && !allowEditModeAutoSetup && !forceInEditMode)
+            {
+                return;
+            }
             if (ensureCollider && GetComponent<Collider>() == null)
             {
                 var boxCollider = gameObject.AddComponent<BoxCollider>();
