@@ -34,6 +34,8 @@ namespace NDI
     {
         [SerializeField] private float reconnectDelaySeconds = 2f;
         [SerializeField] private int maxReconnectAttempts = 5;
+        [SerializeField] private float noFrameTimeoutSeconds = 5f;
+        [SerializeField] private float noFrameGracePeriodSeconds = 1.5f;
 
         public event Action<NDIReceiverState> StateChanged;
         public event Action<string> ErrorChanged;
@@ -48,8 +50,11 @@ namespace NDI
         public Texture VideoTexture => videoTexture;
 
         private Coroutine reconnectCoroutine;
+        private Coroutine receiveCoroutine;
         private Texture2D videoTexture;
         private byte[] frameBuffer;
+        private float lastFrameReceivedTime;
+        private bool isFrameStarved;
 
 #if NDI_SDK_ENABLED
         private NDIlib.recv_instance_t receiverInstance;
@@ -78,19 +83,30 @@ namespace NDI
 
             SelectedSource = source;
             Disconnect();
-            StartReconnectLoop();
+            StartReconnectLoop(forceRestart: true);
         }
 
         public void Disconnect()
         {
             StopReconnectLoop();
+            StopReceiveLoop();
             CleanupReceiver();
+            ResetNoFrameTimeoutState();
             UpdateState(NDIReceiverState.Idle);
         }
 
-        private void StartReconnectLoop()
+        private void StartReconnectLoop(bool forceRestart = false)
         {
-            StopReconnectLoop();
+            if (reconnectCoroutine != null)
+            {
+                if (!forceRestart)
+                {
+                    return;
+                }
+
+                StopReconnectLoop();
+            }
+
             reconnectCoroutine = StartCoroutine(ReconnectLoop());
         }
 
@@ -103,6 +119,15 @@ namespace NDI
             }
         }
 
+        private void StopReceiveLoop()
+        {
+            if (receiveCoroutine != null)
+            {
+                StopCoroutine(receiveCoroutine);
+                receiveCoroutine = null;
+            }
+        }
+
         private IEnumerator ReconnectLoop()
         {
             UpdateState(NDIReceiverState.Connecting);
@@ -111,6 +136,7 @@ namespace NDI
 #if !NDI_SDK_ENABLED
             SetError("NDI SDK is not enabled. Define NDI_SDK_ENABLED to activate receiving.");
             UpdateState(NDIReceiverState.Error);
+            reconnectCoroutine = null;
             yield break;
 #else
             var attempts = 0;
@@ -119,7 +145,9 @@ namespace NDI
                 if (TryConnectReceiver())
                 {
                     UpdateState(NDIReceiverState.Connected);
-                    StartCoroutine(ReceiveLoop());
+                    ResetNoFrameTimeoutState();
+                    receiveCoroutine = StartCoroutine(ReceiveLoop());
+                    reconnectCoroutine = null;
                     yield break;
                 }
 
@@ -130,17 +158,22 @@ namespace NDI
 
             SetError("Failed to connect to NDI source after multiple attempts.");
             UpdateState(NDIReceiverState.Error);
+            reconnectCoroutine = null;
 #endif
         }
 
 #if NDI_SDK_ENABLED
         private IEnumerator ReceiveLoop()
         {
+            lastFrameReceivedTime = Time.realtimeSinceStartup;
+            var starvationStartedTime = 0f;
+
             while (State == NDIReceiverState.Connected)
             {
                 var result = NDIlib.recv_capture_v2(receiverInstance, ref videoFrame, ref audioFrame, ref metadataFrame, 1000);
                 if (result == NDIlib.frame_type_e.frame_type_video)
                 {
+                    ResetNoFrameTimeoutState();
                     UpdateMetricsFromFrame(videoFrame);
                     UpdateVideoTextureFromFrame(videoFrame);
                     NDIlib.recv_free_video_v2(receiverInstance, ref videoFrame);
@@ -155,14 +188,34 @@ namespace NDI
                 }
                 else if (result == NDIlib.frame_type_e.frame_type_none)
                 {
-                    SetError("No NDI frames received.");
-                    UpdateState(NDIReceiverState.Reconnecting);
-                    StartReconnectLoop();
-                    yield break;
+                    if (!isFrameStarved)
+                    {
+                        isFrameStarved = true;
+                        starvationStartedTime = Time.realtimeSinceStartup;
+                        SetError("No NDI frames available yet; waiting for stream data.");
+                    }
+
+                    var elapsedWithoutFrame = Time.realtimeSinceStartup - lastFrameReceivedTime;
+                    if (elapsedWithoutFrame >= noFrameTimeoutSeconds)
+                    {
+                        SetError($"No NDI video frames for {elapsedWithoutFrame:F1}s; reconnecting.");
+                        UpdateState(NDIReceiverState.Reconnecting);
+                        StartReconnectLoop();
+                        receiveCoroutine = null;
+                        yield break;
+                    }
+
+                    var starvationElapsed = Time.realtimeSinceStartup - starvationStartedTime;
+                    if (starvationElapsed <= noFrameGracePeriodSeconds)
+                    {
+                        SetError($"NDI frame starvation detected ({starvationElapsed:F1}s/{noFrameGracePeriodSeconds:F1}s grace).");
+                    }
                 }
 
                 yield return null;
             }
+
+            receiveCoroutine = null;
         }
 #endif
 
@@ -343,6 +396,13 @@ namespace NDI
                 ErrorMessage = string.Empty;
                 ErrorChanged?.Invoke(ErrorMessage);
             }
+        }
+
+        private void ResetNoFrameTimeoutState()
+        {
+            isFrameStarved = false;
+            lastFrameReceivedTime = Time.realtimeSinceStartup;
+            ClearError();
         }
     }
 }
